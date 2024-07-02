@@ -70,7 +70,13 @@
         .message { padding: 10px; border-radius: 15px; margin-bottom: 10px; word-wrap: break-word; }
         .user { background-color: #e6e6e6; }
         .agent { background-color: #cccccc; }
-        #message-container { position: relative; width: 80%; margin: 10px; }
+
+        #message-container {
+            position: relative;
+            width: 80%;
+            margin: 10px;
+        }
+
         #default-questions {
             margin: 10px; /* Añade un margen superior para separarlo del contenedor de mensajes */
             text-align: center; /* Centra el texto de los botones si es necesario */
@@ -79,7 +85,7 @@
             border-radius: 15px;
             border: 1px solid #ccc;
             padding: 10px;
-            width: calc(100% - 50px);
+            width: calc(100% - 50px); /* Ajuste para espacio del botón de archivo y enviar */
             height: auto;
             display: block;
             outline: none;
@@ -107,7 +113,23 @@
         }
 
         /* Ajustes para centrar el botón con respecto a la barra de mensajes */
-        #sendButton { cursor: pointer; background-color: #000; color: #fff; border: none; border-radius: 15px; width: 30px; height: 30px; position: absolute; right: 0; top: 78%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; }
+        #sendButton { 
+            cursor: pointer; 
+            background-color: #000; 
+            color: #fff; 
+            border: none; 
+            border-radius: 15px; 
+            width: 30px; 
+            height: 30px; 
+            position: absolute; 
+            right: 0; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        
         .header {
             display: flex;
             align-items: center; /* Asegura la alineación vertical */
@@ -143,21 +165,7 @@
             margin: 5px;
             cursor: pointer;
             }
-
-        /* .feedback-button-neg {
-            cursor: pointer;
-            padding: 5px;
-            position: relative; 
-            float: right; 
-            margin-right: 10px; /* Espacio entre los botones 
-        }
-        .feedback-button-pos {
-            cursor: pointer;
-            padding: 5px;
-            position: relative;
-            float: right; 
-            margin-right: 10px; /* Espacio entre los botones 
-        } */
+            
         .feedback-buttons-container {
             position: relative; 
             float: right;
@@ -201,6 +209,11 @@
             box-sizing: border-box; /* Asegura que padding y border estén incluidos en el ancho y alto */
             resize: none;
         }
+
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -210,12 +223,15 @@
             <h2>Asistente <span class="red">&gt;</span>Bantotal</h2>
         </div>
         <div id="chat"></div>
+
+        <div id="default-questions" class="disabled">
+            <button class="pregunta-btn" onclick="presetQuestion('¿Cuales son las tablas involucradas?')">¿Cuales son las tablas involucradas?</button>
+            <button class="pregunta-btn" onclick="presetQuestion('¿Cuales son los programas involucrados?')">¿Cuales son los programas involucrados?</button>
+        </div>
+
         <div id="message-container">
-            <!-- <div id="default-questions">
-                <button class="pregunta-btn" onclick="presetQuestion('¿Que es el proceso de migracion?')">¿Que es el proceso de migracion?</button>
-                <button class="pregunta-btn" onclick="presetQuestion('¿Como agrego una nueva bandeja?')">¿Como agrego una nueva bandeja?</button>
-            </div> -->
             <textarea id="message" rows="1" autofocus oninput="adjustHeight()" placeholder="Escribe tu pregunta..."></textarea>
+                        
             <div id="sendButton" onclick="sendMessage()">
                 <i id="sendIcon" class="sendIcon"></i>
             </div>
@@ -258,10 +274,17 @@
             sessionStorage.setItem('tabId', tabId);
         }
 
+        function presetQuestion(question) {
+            document.getElementById('message').value = question;
+            sendMessage();
+        }
+
         function sendMessage() {
             if (awaitingResponse) return;
             var messageInput = document.getElementById('message');
+
             var message = messageInput.value;
+
             var chat = document.getElementById('chat');
             var sendButton = document.getElementById('sendButton');
             var sendIcon = document.getElementById('sendIcon');
@@ -294,11 +317,14 @@
                         const data = event.data;
                         if(data === "done") {
                             eventSource.close();
-                            //messageContainer.innerHTML += '<div class="feedback-buttons-container">' +
-                            //' <span class="feedback-button-pos" onclick="showFeedbackBox(this, true)">✓</span>' +
-                            //' <span class="feedback-button-neg" onclick="showFeedbackBox(this, false)">✗</span>' +
-                            //'</div></div>';
-                            // Restablece UI para nueva entrada
+                            messageContainer.innerHTML += '<div class="feedback-buttons-container">' +
+                            ' <span class="feedback-button-pos" onclick="showFeedbackBox(this, true)">✓</span>' +
+                            ' <span class="feedback-button-neg" onclick="showFeedbackBox(this, false)">✗</span>' +
+                            '</div></div>';
+                            //Restablece UI para nueva entrada
+
+                            document.getElementById('default-questions').classList.remove('disabled');
+
                             sendIcon.className = 'sendIcon';
                             sendButton.style.cursor = 'pointer';
                             messageInput.value = '';
@@ -360,7 +386,7 @@
             return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
-        /* function showFeedbackBox(button, isPositive) {
+        function showFeedbackBox(button, isPositive) {
             // Elimina un feedbackBox existente si se hace clic nuevamente
             let existingFeedbackBox = button.parentNode.querySelector(".feedback-container");
             if (existingFeedbackBox) {
@@ -410,7 +436,7 @@
             });
 
             feedbackBox.focus();
-        } */
+        }
 
         function sendFeedback(feedbackText, button, Ispositive) {
             fetch('/feedback', {
@@ -418,7 +444,11 @@
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({feedback: feedbackText, positive:Ispositive,tabId: tabId}),
+                        body: JSON.stringify({
+                            feedback: feedbackText, 
+                            positive:Ispositive,
+                            tabId: tabId
+                        }),
                     })
                     .then(response => response.json())
                     .then(data => console.log(data))
